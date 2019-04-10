@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>解锁</title>
+    <style>
+        * {
+            margin:0;
+            padding:0;
+        }
+        body {
+            text-align: center;
+            background-color: #305066;
+        }
+        #wrap {
+            position: absolute;
+            top: 0;
+            left:0;
+            right:0;
+            bottom:0;
+        }
+        .title {
+            color: #22C3AA;
+        }
+        .updatePassword {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            color:#fff;
+            font-size: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+</body>
+<script>
+window.H5lock = function (obj) {
+    this.width = obj.width || 300
+    this.height = obj.height || 300
+    this.chooseType = obj.chooseType || 3
+    this.devicePixelRatio = window.devicePixelRatio || 1
+}
+
+H5lock.prototype.init = function () { // 初始化
+    this.initDom()
+    this.canvas = document.getElementById('canvas')
+    this.ctx = this.canvas.getContext('2d')
+    this.pswObj = window.localStorage.getItem('passwordxx') ? {
+        step: 2,
+        spassword: JSON.parse(window.localStorage.getItem('passwordxx'))
+        } : {}
+    this.touchFlag = false // 是否在圆内触发触摸事件
+    this.createCircle() // 初始化圆心数组以及滑动数组和剩余未触摸的数组
+    this.drawCle(this.arr) // 绘制基础的圆
+    this.bindEvent() // 绑定事件
+}
+
+H5lock.prototype.initDom = function () {
+    var wrap = document.createElement('div')
+    wrap.id = 'wrap'
+    wrap.innerHTML = '<h4 class="title" id="title">绘制解锁图案</h4>'
+                    + '<a class="updatePassword" id="updatePassword">重置密码</a>'
+    var canvas = document.createElement('canvas')
+    canvas.id = 'canvas'
+    canvas.style.width =  this.width + 'px'
+    canvas.style.height =  this.height + 'px'
+    canvas.width = this.width * this.devicePixelRatio
+    canvas.height = this.height * this.devicePixelRatio
+    wrap.appendChild(canvas)
+    document.body.appendChild(wrap)
+}
+
+H5lock.prototype.createCircle = function () {
+    var n = this.chooseType
+    this.arr = [] // 圆心坐标数组
+    this.lastPoint = [] // 触摸过的圆数组
+    this.restPoint = [] // 未触摸的圆
+    this.r = this.ctx.canvas.width / (4 * n + 2) // 计算出半径
+    var count = 0
+    var r = this.r
+    for (var i = 0; i < n; i++) {
+        for (var j = 0; j < n; j++) {
+            count++
+            var obj = { // 创建圆心坐标对象
+                x: 3 * r + 4 * j * r,
+                y: 3 * r + 4 * i * r,
+                index: count
+            }
+            this.arr.push(obj)
+            this.restPoint.push(obj)
+        }
+    }
+}
+
+H5lock.prototype.drawCle = function (arr) { // 绘制基础的圆
+    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height)
+    this.ctx.strokeStyle = '#CFE6FF'
+    this.ctx.lineWidth = 3
+    for (var i = 0; i < arr.length; i++) {
+        this.ctx.beginPath()
+        this.ctx.arc(arr[i].x, arr[i].y, this.r, 0,  2 * Math.PI)
+        this.ctx.closePath()
+        this.ctx.stroke()
+    }
+}
+
+H5lock.prototype.bindEvent = function () {
+    var self = this
+    this.canvas.addEventListener('touchstart', function (e) {
+        e.preventDefault()
+        var pos = self.getPosition(e)
+        for (var i = 0; i < self.arr.length; i++) {
+            if (Math.abs(pos.x - self.arr[i].x) < self.r && Math.abs(pos.y - self.arr[i].y) < self.r) {
+                self.touchFlag = true
+                self.lastPoint.push(self.arr[i])
+                self.restPoint.splice(i, 1)
+                self.drawPoint()
+                break
+            }
+        }
+    })
+    this.canvas.addEventListener('touchmove', function (e) {
+        e.preventDefault() // 阻止手机自动滚屏
+        if (self.touchFlag) {
+            self.update(self.getPosition(e))
+        }
+    })
+
+    this.canvas.addEventListener('touchend', function (e) {
+        e.preventDefault()
+        if (self.touchFlag) {
+            self.touchFlag = false
+            self.storePass(self.lastPoint)
+            setTimeout(function () {
+                self.reset()
+            }, 300)
+        }
+    })
+    document.getElementById('updatePassword').addEventListener('click', function (e) {
+        self.updatePassword()
+    })
+}
+
+H5lock.prototype.updatePassword = function () { // 为重置密码绑定点击事件的监听回调函数
+    window.localStorage.removeItem('passwordxx')
+    this.pswObj = {}
+    document.getElementById('title').innerHTML = '绘制解锁图案'
+    this.reset()
+}
+
+H5lock.prototype.reset = function () { // 重置 包括 右上角重置密码的显隐 以及 标题 以及将画布恢复到初始圆状态
+    this.makeState()
+    this.createCircle()
+    this.drawCle(this.arr)
+}
+
+H5lock.prototype.makeState = function () { // 控制重置密码显隐 以及 标题
+    if (this.pswObj.step === 2) {
+        document.getElementById('updatePassword').style.display = 'block'
+        document.getElementById('title').innerHTML = '请解锁';
+    } else {
+        document.getElementById('updatePassword').style.display = 'none'
+
+    }
+}
+
+H5lock.prototype.storePass = function (psw) { // 存储密码
+    if (!this.pswObj.step) { // 初次输入密码
+        this.pswObj.step = 1 // 视为设置新密码的第一步
+        this.pswObj.fpassword = psw
+        document.getElementById('title').innerHTML = '再次输入'
+    } else if (this.pswObj.step === 1) { // 第二次输入密码
+        if (this.checkPass(psw, this.pswObj.fpassword)) { // 校验第一第二次密码是否一致
+            this.pswObj.step = 2
+            this.pswObj.spassword = psw
+            document.getElementById('title').innerHTML = '密码保存成功'
+            this.drawStatusPoint('#2cff26')
+            window.localStorage.setItem('passwordxx', JSON.stringify(this.pswObj.spassword)) // 存入storage
+        } else { // 不一致 就回到第一步
+            this.drawStatusPoint('red')
+            document.getElementById('title').innerHTML ='两次不一致，重新输入'
+            delete this.pswObj.step
+        }
+    } else { // storage中已经存在密码
+        if (this.checkPass(psw, this.pswObj.spassword)) { // 校验密码是否绘制正确
+            document.getElementById('title').innerHTML = '解锁成功'
+            this.drawStatusPoint('#2cff26')
+        } else {
+            document.getElementById('title').innerHTML = '密码错误'
+            this.drawStatusPoint('red')
+        }
+    }
+}
+
+H5lock.prototype.checkPass  = function (psw1, psw2) { // 校验两个密码的一致性
+    var p1 = ''
+    var p2  = ''
+    for (var i = 0; i < psw1.length; i++) {
+        p1 += psw1[i].index
+    }
+    for (var j = 0; j < psw2.length; j++) {
+        p2 += psw2[j].index
+    }
+    return p1 === p2
+}
+
+
+H5lock.prototype.drawStatusPoint  = function (color) { // 解锁完毕 正确状态 显示绿色边框的圆 错误为红色
+    this.ctx.strokeStyle = color
+    for (var i = 0; i < this.lastPoint.length; i++) {
+        this.ctx.beginPath()
+        this.ctx.arc(this.lastPoint[i].x, this.lastPoint[i].y, this.r, 0 , Math.PI * 2)
+        this.ctx.closePath()
+        this.ctx.stroke()
+    }
+}
+
+
+H5lock.prototype.update = function (pos) { // touchmove的监听回调
+    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height)
+    this.drawCle(this.arr)
+    this.drawPoint()
+    this.drawLine(pos)
+    for (var i = 0; i < this.restPoint.length; i++) { // 已经触摸过的圆心不再判断 直接判断未触摸的
+        if (Math.abs(pos.x - this.restPoint[i].x) < this.r && Math.abs(pos.y - this.restPoint[i].y) < this.r) {
+            this.drawPoint()
+            this.lastPoint.push(this.restPoint[i])
+            this.restPoint.splice(i, 1)
+            break
+        }
+    }
+}
+
+H5lock.prototype.drawLine = function (pos) { // 绘制直线
+    this.ctx.lineWidth = 2
+    this.ctx.beginPath()
+    this.ctx.moveTo(this.lastPoint[0].x, this.lastPoint[0].y)
+    for (var i = 1; i < this.lastPoint.length; i++) {
+        this.ctx.lineTo(this.lastPoint[i].x, this.lastPoint[i].y)
+    }
+    this.ctx.lineTo(pos.x, pos.y)
+    this.ctx.stroke()
+    this.ctx.closePath()
+}
+
+H5lock.prototype.drawPoint = function () { // 绘制实心圆 （表示已经触摸过的圆
+    this.ctx.fillStyle = '#CFE6FF'
+    for (var i = 0; i < this.lastPoint.length; i++) {
+        this.ctx.beginPath()
+        this.ctx.arc(this.lastPoint[i].x, this.lastPoint[i].y, this.r / 2, 0, 2 * Math.PI)
+        this.ctx.fill()
+        this.ctx.closePath()
+    }
+}
+
+
+H5lock.prototype.getPosition = function (e) { // 获取触摸点的坐标 为 触摸点的到浏览器的距离 减去 画布到浏览器的距离
+    var rect = this.canvas.getBoundingClientRect()
+    var obj = {
+        x: (e.touches[0].clientX - rect.left) * this.devicePixelRatio,
+        y: (e.touches[0].clientY - rect.top) * this.devicePixelRatio
+    }
+    return obj
+}
+
+var h = new H5lock({})
+    h.init()
+</script>
+</html>
