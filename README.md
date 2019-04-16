@@ -27,7 +27,7 @@ canvas.style.width/height 和 canvas.width/height 的区别？ <br>
 
 2.创建初始圆心坐标对象，维护三个数组arr(存放初始圆心坐标对象) lastPoint(手指触摸过的圆心对象)  restPoint(剩余未触摸过的圆心对象) <br>
 以初始化3 x 3个圆为例半径的计算
-![半径](http://i2.bvimg.com/682972/aaf8710e307112e9.png) <br>
+![半径](/img/r.png) <br>
 ```
 this.r = this.ctx.canvas.width / (4 * n + 2)
 ```
