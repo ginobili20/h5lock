@@ -19,12 +19,6 @@
 #### 编写思路
 1.初始化canvas的 dom结构 <br>
 
-遇到的问题：
-canvas.style.width/height 和 canvas.width/height 的区别？ <br>
-简单来说  这两种方式设置的结果是不同的 <br>
-通过style设置的宽高是canvas在浏览器中被渲染的宽高 <br>
-通过canvas直接设置的是画布的直接宽高 <br>
-
 2.创建初始圆心坐标对象，维护三个数组arr(存放初始圆心坐标对象) lastPoint(手指触摸过的圆心对象)  restPoint(剩余未触摸过的圆心对象) <br>
 以初始化3 x 3个圆为例半径的计算
 ![半径](https://github.com/ginobili20/h5lock/raw/master/img/r.png) <br>
@@ -73,7 +67,12 @@ pswObj.step为2的时候，表示已经存储了密码，用户绘制的时候 �
 初始化阶段 获取localStorage中的密码存入pswObj中
 
 
+### 遇到的问题
+canvas.style.width/height 和 canvas.width/height 的区别？ <br>
+简单来说  这两种方式设置的结果是不同的 <br>
+通过style设置的宽高是canvas在浏览器中被渲染的宽高 <br>
+通过canvas直接设置的是画布的直接宽高 <br>
 
 
-
-
+### 总结
+熟悉了canvas绘图相关的api以及localStorage添加以及移除存储内容的方法
